@@ -5,10 +5,8 @@ from datetime import datetime
 from datetime import timedelta
 from os import rename, remove, getcwd, path, name
 from glob import glob
-from pyclbr import Function
 from shutil import copyfile
 from urllib.request import urlopen, urlretrieve
-from urllib.error import HTTPError
 from PIL import Image, ImageDraw
 import numpy as np
 
