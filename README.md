@@ -11,6 +11,7 @@ Argument | Description
 ## Examples
 Image source: [https://epic.gsfc.nasa.gov/archive/natural/2018/07/19/png/epic_1b_20180719181319.png](https://epic.gsfc.nasa.gov/archive/natural/2018/07/19/png/epic_1b_20180719181319.png)
 ### Image with Background
+Example background: [https://www.pexels.com/photo/starry-sky-998641/](https://www.pexels.com/photo/starry-sky-998641/)
 ``` bash
 $ python ./dscovr.py -b example_background.jpg
 epic_1b_20180719181319.png downloaded
