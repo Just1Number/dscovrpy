@@ -25,3 +25,11 @@ $ ls ~/.cache/dscovr
 epic.png  image_info.epic
 ```
 ![Epic](example_epic.png)
+
+## Conky
+
+To use the conky lua script you need to set the PATH variable manually in the file. The script provides conky the function `epic_date`, which returns the date of the current picture in the local timezone. A lua datetime format can be set as an argument. Example:
+```
+${lua epic_date %d.%m.%y} # dd.mm.yyyy
+${lua epic_date %X} # hh:MM:ss
+```
