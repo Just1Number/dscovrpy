@@ -9,6 +9,8 @@ Download a recent image of earth close to the current time of day. Images by epi
     - `pip install pillow`
 - numpy
     - `pip install numpy`
+- openCV
+    - `pip install opencv-python` 
 
 ## Command Line Arguments
 

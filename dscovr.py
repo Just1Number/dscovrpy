@@ -7,7 +7,8 @@ from os import rename, remove, getcwd, path, name
 from glob import glob
 from shutil import copyfile
 from urllib.request import urlopen, urlretrieve
-from PIL import Image, ImageDraw
+from PIL import Image
+import cv2 as cv
 import numpy as np
 
 # Constants
@@ -186,26 +187,25 @@ def epic_download(download_directory, image_name, image_url):
   wf.close()
 
 def epic_crop(download_directory, image_name, background):
-  #crop_image(image_path, args.background)
+
   image_path = path.join(download_directory, image_name)
+
+  # Open image with openCV
+  img = cv.imread(image_path)
+
+  # Get mask of everything which is not black
+  lower = np.array([0,0,1]) # almost black
+  upper = np.array([255,255,255]) # white
+  shapeMask = cv.inRange(img, lower, upper)
+  alpha_np = shapeMask.copy()
+
+  # Open image with PIL
   img = Image.open(image_path)
+
   img_np = np.array(img)
-  w, h = img.size #2048x2048
-
-  alpha = Image.new('L', img.size, 0)
-  draw = ImageDraw.Draw(alpha)
-
-  RADIUS = 1630
-  top_x, top_y = (w-RADIUS)/2, (h-RADIUS)/2
-  bot_x, bot_y = w - top_x, h - top_y
-  # draw oval inside a box defined by the top left and bottom right and take a slice of it defined by angles
-  # pieslice([(top_left_point_of_the_box),(bottom_right_point_of_the_box)], starting_angle, ending_angle, fill_color, outline_color )
-  draw.pieslice([(top_x, top_y), (bot_x, bot_y)], 0, 360, fill = 255, outline= "white")
-  alpha_np = np.array(alpha)
-
   img_np = np.dstack((img_np,alpha_np))
-
   img = Image.fromarray(img_np)
+
   try:
     img_bg = Image.open(background)
   except Exception as e:
@@ -213,6 +213,8 @@ def epic_crop(download_directory, image_name, background):
     print(e)
     return
 
+  # Get size of epic image
+  w, h = img.size #2048x2048
   # Resize background to to height of epic image
   w_bg, h_bg = img_bg.size
   if (h_bg != h):
