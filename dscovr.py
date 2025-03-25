@@ -18,7 +18,7 @@ IMAGE_SOURCE = "https://epic.gsfc.nasa.gov/archive/natural/"
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument("-o", dest = "output_dir", help = "set output directory", default = getcwd()) # location of the script: default = path.dirname(path.realpath(__file__))
-  parser.add_argument("-n", dest = "pics_per_day", type = int, help = "use a day with at least PICS_PER_DAY pictures", default = 1)
+  parser.add_argument("-n", dest = "pics_per_day", type = int, help = "use a day with at least PICS_PER_DAY pictures", default = 12)
   parser.add_argument("-b", dest = "background", help = "circle crop image onto background", default = "")
   parser.add_argument("-c", dest = "clean_output", help = "wether or not to clean the output dir", action = 'store_true')
   args = parser.parse_args()
@@ -232,15 +232,14 @@ def epic_finalize(download_directory, image_name):
   image_path = path.join(download_directory, image_name)
   final_path = path.join(download_directory, 'epic.png')
   if path.exists(final_path):
-    remove(final_path) # needed for windows only
+    remove(final_path) # needed for Windows only
   rename(image_path, final_path)
 
-  # Create a copy of the image for a diashow under windows
-  if name == "nt":
-    final_path_copy = path.join(download_directory, 'epic_copy.png')
-    if path.exists(final_path_copy):
-      remove(final_path_copy) # Windows only
-    copyfile(final_path, final_path_copy)
+  # Create a copy of the image for a diashow under Windows or certain DEs
+  final_path_copy = path.join(download_directory, 'epic_copy.png')
+  if path.exists(final_path_copy):
+    remove(final_path_copy) # Windows only
+  copyfile(final_path, final_path_copy)
 
 def epic_clean(download_directory):
   file_pattern = path.join(download_directory, 'epic_1b_*.png')
