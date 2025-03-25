@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 from datetime import timedelta
 from os import rename, remove, getcwd, path, name
 from glob import glob
@@ -48,7 +48,7 @@ def main():
 
 def epic_find(pics_per_day):
   # EPIC is out of order, so old images from 2018 are used
-  dtnow = datetime.utcnow()#.replace(year=2018)
+  dtnow = datetime.now(UTC)#.replace(year=2018)
   api_url = API_URL_BASE + dtnow.strftime("%Y-%m-%d")
   # https://epic.gsfc.nasa.gov/api/natural/date/2018-06-30
 
