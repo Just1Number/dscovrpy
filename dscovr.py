@@ -12,7 +12,7 @@ import cv2 as cv
 import numpy as np
 
 # Constants
-API_URL_BASE = "https://epic.gsfc.nasa.gov/api/natural/date/"
+API_URL_BASE = "https://epic.gsfc.nasa.gov/api/natural/"
 IMAGE_SOURCE = "https://epic.gsfc.nasa.gov/archive/natural/"
 
 def main():
@@ -21,6 +21,7 @@ def main():
   parser.add_argument("-n", dest = "pics_per_day", type = int, help = "use a day with at least PICS_PER_DAY pictures", default = 12)
   parser.add_argument("-b", dest = "background", help = "circle crop image onto background", default = "")
   parser.add_argument("-c", dest = "clean_output", help = "wether or not to clean the output dir", action = 'store_true')
+  parser.add_argument("-t", dest = "lookup_period", type = int, help = "how many days in the past to check for pictures. Default: 10", default = 10)
   args = parser.parse_args()
 
   if args.pics_per_day > 24:
@@ -34,7 +35,7 @@ def main():
   if args.clean_output:
     epic_clean(args.output_dir)
 
-  image_name, image_url = epic_find(args.pics_per_day)
+  image_name, image_url = epic_find(args.pics_per_day, args.lookup_period)
 
   epic_download(args.output_dir, image_name, image_url)
 
@@ -46,10 +47,10 @@ def main():
 
   print(image_name + " downloaded")
 
-def epic_find(pics_per_day):
+def epic_find(pics_per_day, lookup_period):
   # EPIC is out of order, so old images from 2018 are used
-  dtnow = datetime.now(UTC)#.replace(year=2018)
-  api_url = API_URL_BASE + dtnow.strftime("%Y-%m-%d")
+  dtnow = datetime.now(UTC)
+  api_url = API_URL_BASE
   # https://epic.gsfc.nasa.gov/api/natural/date/2018-06-30
 
   # Parsing api 
@@ -64,15 +65,16 @@ def epic_find(pics_per_day):
   data = json.loads(contents.decode('utf-8'))
 
   # If there are to few images per day use a previous day, that has more
-  # Cancel search after 10 days
-  d = dtnow.date()
+  # Cancel search after lookup_period days
+  d = datetime.strptime(data[0]['date'], '%Y-%m-%d %H:%M:%S')
+  print("Newest pictures found on " + d.strftime('%Y-%m-%d'))
   i = 0
   while len(data) < pics_per_day:
-    if i == 10:
+    if i == lookup_period:
       if pics_per_day == 1:
-        print("The last 10 days don't contain any pictures. Check " + API_URL_BASE)
+        print("The last " + lookup_period + " days don't contain any pictures. Check " + API_URL_BASE)
         exit(1)
-      print("None of the last 10 days had at least " + str(pics_per_day) + " pictures. Trying again with " + str(pics_per_day - 1))
+      print("None of the last " + lookup_period + " days had at least " + str(pics_per_day) + " pictures. Trying again with " + str(pics_per_day - 1))
       d = dtnow.date()
       pics_per_day -= 1
       i = 0
@@ -80,7 +82,7 @@ def epic_find(pics_per_day):
     i += 1
     # go back one day
     d -= timedelta(1)
-    api_url = API_URL_BASE + d.strftime("%Y-%m-%d")
+    api_url = API_URL_BASE + 'date/' + d.strftime("%Y-%m-%d")
     try:
       contents = urlopen(api_url).read()
     except Exception as e:
@@ -118,7 +120,7 @@ def epic_find(pics_per_day):
     late = True
 
   if early or late:
-    api_url = API_URL_BASE + d.strftime("%Y-%m-%d")
+    api_url = API_URL_BASE + 'date/' + d.strftime("%Y-%m-%d")
     try:
       contents = urlopen(api_url).read()
       additional_data = json.loads(contents.decode('utf-8'))
