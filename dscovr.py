@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import json
-from datetime import datetime, UTC
-from datetime import timedelta
+from datetime import datetime, UTC, timedelta
 from os import rename, remove, getcwd, path, name
 from glob import glob
 from shutil import copyfile
@@ -10,6 +9,7 @@ from urllib.request import urlopen, urlretrieve
 from PIL import Image
 import cv2 as cv
 import numpy as np
+import math
 
 # Constants
 API_URL_BASE = "https://epic.gsfc.nasa.gov/api/natural/"
@@ -48,9 +48,36 @@ def main():
   print(image_name + " downloaded")
 
 def epic_find(pics_per_day, lookup_period):
-  # EPIC is out of order, so old images from 2018 are used
   dtnow = datetime.now(UTC)
+  # initialize search_year
+  search_year = dtnow.year
+  # EPIC is sometimes out of order, so we check for the latest picture
+  # We always want a picture close to the current time of year
   api_url = API_URL_BASE
+  # https://epic.gsfc.nasa.gov/api/natural
+  # Parsing api
+  contents = bytes(0)
+  try:
+    contents = urlopen(api_url).read()
+  except Exception as e:
+    print("Cannot connect to API at " + api_url)
+    print("Check your internet connection")
+    print(e)
+    exit(1)
+  data = json.loads(contents.decode('utf-8'))
+  # Get date of latest picture
+  latest_date = datetime.strptime(data[0]['date'], "%Y-%m-%d %H:%M:%S").date()
+  delta = dtnow.date() - latest_date
+  if delta.days > lookup_period:
+    # reduce api calls by going back to a year with pictures
+    search_year = dtnow.year - math.ceil( delta.days / 365.2425 ) # Gregorian calendar
+    # handle leap years
+    if (dtnow.month == 2) and (dtnow.day == 29):
+      dtnow += timedelta(1) # 02-29 -> 03-01
+
+  # Get today's pictures
+  d = dtnow.date().replace(year = search_year)
+  api_url = API_URL_BASE + 'date/' + d.strftime("%Y-%m-%d")
   # https://epic.gsfc.nasa.gov/api/natural/date/2018-06-30
 
   # Parsing api 
@@ -66,17 +93,27 @@ def epic_find(pics_per_day, lookup_period):
 
   # If there are to few images per day use a previous day, that has more
   # Cancel search after lookup_period days
-  d = datetime.strptime(data[0]['date'], '%Y-%m-%d %H:%M:%S')
-  print("Newest pictures found on " + d.strftime('%Y-%m-%d'))
   i = 0
-  while len(data) < pics_per_day:
+  p = pics_per_day
+  while len(data) < p:
     if i == lookup_period:
-      if pics_per_day == 1:
-        print("The last " + lookup_period + " days don't contain any pictures. Check " + API_URL_BASE)
-        exit(1)
-      print("None of the last " + lookup_period + " days had at least " + str(pics_per_day) + " pictures. Trying again with " + str(pics_per_day - 1))
-      d = dtnow.date()
-      pics_per_day -= 1
+      if p <= math.ceil(2 * pics_per_day / 3):
+        # The last lookup_period days were searched for pictures and
+        # no days with sufficient number of pictures were found.
+        # Reset the search and start at the desired date one year earlier
+        p = pics_per_day
+        # handle leap years
+        if (dtnow.month == 2) and (dtnow.day == 29):
+          dtnow += timedelta(2) # 02-29 -> 03-01
+        # go back one year
+        search_year -= 1
+        print("The last " + str(lookup_period) + " days don't contain sufficient pictures. Checking for pictures around the same time in " + str(search_year))
+      else:
+        # Check the lookup_period for days with p-1 pictures
+        print("None of the last " + str(lookup_period) + " days had at least " + str(p) + " pictures. Trying again with " + str(p - 1))
+        p -= 1
+      # reset date to tomorrow. Another day is subtracted just before the api call
+      d = dtnow.date().replace(year = search_year) + timedelta(1)
       i = 0
       continue
     i += 1
@@ -91,6 +128,7 @@ def epic_find(pics_per_day, lookup_period):
       exit(1)
     data = json.loads(contents.decode('utf-8'))
 
+  print("Found " + str(len(data)) + " pictures on " + d.strftime("%Y-%m-%d"))
   image_times = []
   # Fill image_times with all timestamps of the chosen day
   for meta in data:
